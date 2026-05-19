@@ -1,0 +1,35 @@
+================================================
+               BANCART PRO 5.0                  
+            CUPOM DE CONSUMO - MESA 01      
+================================================
+Data: 2026-05-19   Hora: 16:12:03
+------------------------------------------------
+PRODUTO                  QTD   TOTAL     
+------------------------------------------------
+Cerveja Heineken         1     R$12.00   
+Cerveja Heineken         1     R$12.00   
+Cerveja Heineken         2     R$24.00   
+ABATIMENTO (DINHEIRO)    1     R$-12.00  
+ABATIMENTO (DINHEIRO)    1     R$-12.00  
+Cerveja Heineken         2     R$24.00   
+Cerveja Heineken         1     R$12.00   
+ABATIMENTO (DÉBITO)      1     R$-12.00  
+Cerveja Heineken         1     R$12.00   
+Jantinha                 5     R$100.00  
+ABATIMENTO (DINHEIRO)    1     R$-110.00 
+ABATIMENTO (PIX)         1     R$-2.00   
+Espeto                   1     R$10.00   
+------------------------------------------------
+SUBTOTAL DOS ITENS:                   R$ 10.00
+DESCONTOS/ABATIMENTOS:                R$ -148.00
+TOTAL LÍQUIDO DA COMANDA:             R$ -138.00
+================================================
+HISTÓRICO DE PAGAMENTOS:
+ -> DINHEIRO       :                   R$ 12.00
+ -> DINHEIRO       :                   R$ 12.00
+ -> DÉBITO         :                   R$ 12.00
+ -> DINHEIRO       :                   R$ 110.00
+ -> PIX            :                   R$ 2.00
+================================================
+          Obrigado pela preferência!            
+================================================

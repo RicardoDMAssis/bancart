@@ -23,6 +23,7 @@ class AbaBalcao(tk.Frame):
         self.tree_avulso = ttk.Treeview(self, columns=('Prod','Qtd','Total'), show='headings', height=10)
         self.tree_avulso.heading('Prod', text='Produto'); self.tree_avulso.heading('Qtd', text='Qtd'); self.tree_avulso.heading('Total', text='Total')
         self.tree_avulso.pack(fill='both', expand=True, padx=10, pady=5)
+        self.tree_avulso.bind("<Double-1>", self.ao_clicar_duplo_balcao)
         tk.Button(self, text="Limpar", command=self.limpar_avulso).pack()
         
         fr_base = tk.Frame(self, bg=CORES['painel'], pady=10); fr_base.pack(fill='x', padx=10, pady=10)
@@ -51,6 +52,96 @@ class AbaBalcao(tk.Frame):
 
     def limpar_avulso(self): 
         self.carrinho_avulso = []; self.atualizar_avulso()
+
+    def ao_clicar_duplo_balcao(self, event):
+        sel = self.tree_avulso.selection()
+        if not sel:
+            return
+            
+        # Descobre qual índice da lista 'carrinho_avulso' foi clicado com base na linha selecionada
+        index_selecionado = self.tree_avulso.index(sel[0])
+        item_carrinho = self.carrinho_avulso[index_selecionado]
+        
+        # Abre a tela flutuante enviando o índice do item no carrinho
+        self.abrir_janela_editar_qtd_balcao(index_selecionado, item_carrinho['nome'], item_carrinho['qtd'], item_carrinho['id'])
+
+    def abrir_janela_editar_qtd_balcao(self, index_item, produto_nome, qtd_atual, produto_id):
+        janela_qtd = tk.Toplevel(self)
+        janela_qtd.title("Editar / Remover do Balcão")
+        janela_qtd.geometry("380x220")
+        janela_qtd.configure(bg=CORES['painel'])
+        janela_qtd.resizable(False, False)
+
+        # 1. Função interna para SALVAR / EDITAR a quantidade
+        def salvar_nova_quantidade():
+            try:
+                nova_qtd = int(ent_nova_qtd.get())
+                if nova_qtd <= 0:
+                    messagebox.showerror("Erro", "A quantidade deve ser maior que zero. Para apagar, clique em 'Remover'.", parent=janela_qtd)
+                    return
+            except ValueError:
+                messagebox.showerror("Erro", "Insira um número inteiro válido.", parent=janela_qtd)
+                return
+
+            if nova_qtd == qtd_atual:
+                janela_qtd.destroy()
+                return
+
+            # Busca o preço unitário e estoque atual do produto no BD para validação
+            conn = sqlite3.connect(DB_NAME)
+            res = conn.cursor().execute("SELECT preco, estoque FROM produtos WHERE id=?", (produto_id,)).fetchone()
+            conn.close()
+
+            if not res:
+                messagebox.showerror("Erro", "Produto não encontrado no banco.", parent=janela_qtd)
+                return
+
+            preco_unitario, estoque_atual = res
+
+            # No balcão o produto ainda NÃO saiu do estoque no BD, então precisamos ver se o estoque suporta a nova quantidade total
+            if nova_qtd > estoque_atual:
+                messagebox.showerror("Erro", f"Estoque insuficiente!\nDisponível: {estoque_atual}", parent=janela_qtd)
+                return
+
+            # Atualiza o item diretamente na lista em memória (carrinho)
+            self.carrinho_avulso[index_item]['qtd'] = nova_qtd
+            self.carrinho_avulso[index_item]['tot'] = preco_unitario * nova_qtd
+
+            # Atualiza a interface
+            janela_qtd.destroy()
+            self.atualizar_avulso()
+            messagebox.showinfo("Sucesso", "Quantidade atualizada no carrinho!")
+
+        # 2. Função interna para REMOVER o produto do carrinho
+        def remover_produto_carrinho():
+            if messagebox.askyesno("Confirmar Remoção", f"Deseja realmente remover '{produto_nome}' do balcão?", parent=janela_qtd):
+                # Remove da lista em memória pelo índice
+                self.carrinho_avulso.pop(index_item)
+                
+                janela_qtd.destroy()
+                self.atualizar_avulso()
+                messagebox.showinfo("Sucesso", "Item removido do balcão!")
+
+        # 3. Desenho dos componentes na janela (Corrigido para evitar tela em branco no Linux)
+        tk.Label(janela_qtd, text="EDITAR OU REMOVER ITEM", font=('Arial', 12, 'bold'), bg=CORES['painel'], fg=CORES['amarelo']).pack(pady=5)
+        tk.Label(janela_qtd, text=f"{produto_nome}", font=('Arial', 11), bg=CORES['painel'], fg='white', wraplength=340).pack(pady=2)
+        
+        tk.Label(janela_qtd, text="Nova Quantidade:", bg=CORES['painel'], fg='white').pack(pady=5)
+        ent_nova_qtd = tk.Entry(janela_qtd, font=('Arial', 12), width=10, justify='center')
+        ent_nova_qtd.insert(0, str(qtd_atual))
+        ent_nova_qtd.pack(pady=2)
+        
+        fr_botoes_popup = tk.Frame(janela_qtd, bg=CORES['painel'])
+        fr_botoes_popup.pack(pady=15)
+        
+        tk.Button(fr_botoes_popup, text="SALVAR", bg=CORES['verde'], fg='white', font=('Arial', 10, 'bold'), width=14, command=salvar_nova_quantidade).pack(side='left', padx=10)
+        tk.Button(fr_botoes_popup, text="REMOVER", bg=CORES['vermelho'], fg='white', font=('Arial', 10, 'bold'), width=14, command=remover_produto_carrinho).pack(side='left', padx=10)
+        
+        # Sincronização segura com o sistema de janelas do Linux
+        janela_qtd.update()
+        janela_qtd.grab_set()
+        ent_nova_qtd.focus_set()
+        ent_nova_qtd.selection_range(0, tk.END)
 
     def finalizar_avulso(self):
         if not self.carrinho_avulso: return

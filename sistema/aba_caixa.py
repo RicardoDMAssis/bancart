@@ -26,7 +26,7 @@ class AbaCaixa(tk.Frame):
         
         fr_botoes = tk.Frame(self, bg=CORES['fundo']); fr_botoes.pack()
         tk.Button(fr_botoes, text="Atualizar Lista", command=self.carregar_historico).pack(side='left', padx=10)
-        tk.Button(fr_botoes, text="📄 SALVAR RELATÓRIO DO DIA", bg=CORES['azul'], fg='white', font=('Arial', 10, 'bold'), command=self.salvar_relatorio_txt).pack(side='left', padx=10)
+        tk.Button(fr_botoes, text="SALVAR RELATÓRIO DO DIA", bg=CORES['azul'], fg='white', font=('Arial', 10, 'bold'), command=self.salvar_relatorio_txt).pack(side='left', padx=10)
 
     def carregar_historico(self):
         self.tree_hist.delete(*self.tree_hist.get_children()); dt_hoje = datetime.now().strftime("%Y-%m-%d"); fat = 0
