@@ -9,4 +9,4 @@
 - [X] OPCAO DE GERAR PDF DA COMANDA POR CLIENTE
 - [X] SISTEMA DE SALDO DE CAIXA
 - [X] EM CASO DE PAGAMENTO EM DINHEIRO, ADICIONAR FUNCAO TROCO OU EXATO
-- [ ] FUNCAO BAIXAR RECIBO (CNPJ, endereço, telefone, valor, forma de pagamento e itens adquiridos)
+- [X] FUNCAO BAIXAR RECIBO (CNPJ, endereço, telefone, valor, forma de pagamento e itens adquiridos)

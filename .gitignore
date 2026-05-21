@@ -1,0 +1,62 @@
+# === Python ===
+# Ignora arquivos compilados que o Python gera automaticamente
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# === Ambiente Virtual (Venv) ===
+# Ignora as dependências instaladas via pip (como o reportlab) para não sobrecarregar o GitHub
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# === Banco de Dados (SQLite) ===
+# Ignora o banco de dados de teste/produção local e as pastas de backups geradas pelo sistema
+*.db
+*.db-journal
+*.db-wal
+backups/
+
+# === Relatórios e Arquivos Gerados ===
+# Ignora os recibos e comandas em PDF ou TXT gerados pelos testes locais
+*.pdf
+*.txt
+!requirements.txt
+
+# === IDEs e Editores (VS Code / PyCharm) ===
+# Ignora configurações pessoais do seu editor de código
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# === Sistema Operacional ===
+# Arquivos ocultos do Linux e Windows
+.DS_Store
+Thumbs.db

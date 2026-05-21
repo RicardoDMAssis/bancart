@@ -49,7 +49,7 @@ class AbaMesas(tk.Frame):
         self.lbl_total_mesa.pack(pady=10)
         tk.Label(fr_det, text="Pagamento do Saldo Restante:", bg=CORES['fundo'], fg='white').pack()
         self.cb_pag_mesa = ttk.Combobox(fr_det, values=["DINHEIRO", "PIX", "CRÉDITO", "DÉBITO"]); self.cb_pag_mesa.current(0); self.cb_pag_mesa.pack(pady=2)
-        tk.Button(fr_det, text="FECHAR MESA / DIVIDIR", bg=CORES['vermelho'], fg='white', font=('Arial', 12, 'bold'), width=25, command=self.fechar_mesa).pack(pady=10)
+        tk.Button(fr_det, text="FECHAR MESA", bg=CORES['vermelho'], fg='white', font=('Arial', 12, 'bold'), width=25, command=self.fechar_mesa).pack(pady=10)
         self.atualizar_cores_mesas()
 
     def atualizar_combobox(self, lista_cb):
@@ -140,7 +140,7 @@ class AbaMesas(tk.Frame):
     def abrir_janela_desconto(self, total_original):
         janela_desc = tk.Toplevel(self)
         janela_desc.title(f"Fechamento / Divisão - Mesa {self.mesa_atual:02d}")
-        janela_desc.geometry("420x380")
+        janela_desc.geometry("520x380")
         janela_desc.configure(bg=CORES['painel'])
         janela_desc.resizable(False, False)
 
