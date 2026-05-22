@@ -146,5 +146,120 @@ class AbaCaixa(tk.Frame):
             conn.cursor().execute("UPDATE controle_caixa SET status='FECHADO' WHERE id=?", (self.caixa_id_atual,))
             conn.commit(); conn.close(); self.verificar_status_caixa()
 
-    def salvar_relatorio_txt(self): 
-        messagebox.showinfo("Sucesso", "Dados consolidados no banco!")
+    def salvar_relatorio_txt(self):
+        dt_hoje = datetime.now().strftime("%Y-%m-%d")
+        nome_arq = f"Relatorio_Caixa_{dt_hoje}.txt"
+        
+        try:
+            conn = sqlite3.connect(DB_NAME)
+            cursor = conn.cursor()
+            
+            # 1. Recupera o valor de abertura do caixa atual
+            abertura = 0.0
+            if self.caixa_id_atual:
+                abertura = cursor.execute("SELECT valor_abertura FROM controle_caixa WHERE id=?", (self.caixa_id_atual,)).fetchone()[0]
+                
+            # 2. Busca todas as Mesas Fechadas no dia de hoje
+            mesas_fechadas = cursor.execute(
+                """SELECT data_fechamento, id, mesa_id, pagamento,
+                          (SELECT SUM(total) FROM itens_atendimento WHERE atendimento_id = atendimentos.id)
+                   FROM atendimentos 
+                   WHERE status='FECHADO' AND data_fechamento LIKE ?""",
+                (f"{dt_hoje}%",)
+            ).fetchall()
+            
+            # 3. Busca todas as Vendas de Balcão e Sangrias do dia de hoje
+            vendas_balcao = cursor.execute(
+                "SELECT data_hora, produto_nome, total, pagamento FROM vendas_balcao WHERE data_hora LIKE ?",
+                (f"{dt_hoje}%",)
+            ).fetchall()
+            
+            conn.close()
+            
+            if not mesas_fechadas and not vendas_balcao:
+                messagebox.showinfo("Vazio", "Nenhuma movimentação localizada hoje para gerar relatório.")
+                return
+
+            # Acumuladores financeiros
+            total_bruto = 0.0
+            total_dinheiro_movimentado = 0.0
+            total_pix = 0.0
+            total_cartao = 0.0
+            total_cortesias = 0.0
+
+            with open(nome_arq, "w", encoding='utf-8') as f:
+                f.write(f"=================================================================================\n")
+                f.write(f"                      FECHAMENTO DE CAIXA DIÁRIO: {dt_hoje}                      \n")
+                f.write(f"=================================================================================\n\n")
+                f.write(f"FUNDO DE TROCO INICIAL (ABERTURA): R$ {abertura:.2f}\n")
+                f.write("-" * 81 + "\n")
+                f.write(f"{'HORA':<10} {'ORIGEM':<12} {'MOVIMENTAÇÃO / DESCRIÇÃO':<32} {'TOTAL (R$)':<15} {'PAGAMENTO'}\n")
+                f.write("-" * 81 + "\n")
+                
+                # PROCESSA AS MESAS FECHADAS
+                for m in mesas_fechadas:
+                    hora = m[0].split(' ')[1]
+                    origem = f"Mesa {m[2]:02d}"
+                    desc = f"Comanda Finalizada nº {m[1]}"
+                    total_comanda = m[4] if m[4] else 0.0
+                    pgto = m[3]
+                    
+                    f.write(f"{hora:<10} {origem:<12} {desc:<32} R$ {total_comanda:<12.2f} {pgto}\n")
+                    
+                    if total_comanda > 0:
+                        total_bruto += total_comanda
+                    
+                    if pgto == "DINHEIRO": 
+                        total_dinheiro_movimentado += total_comanda
+                    elif pgto == "PIX": 
+                        total_pix += total_comanda
+                    elif pgto in ["CRÉDITO", "DÉBITO"]: 
+                        total_cartao += total_comanda
+
+                # PROCESSA O BALCÃO E SANGRIAS
+                for b in vendas_balcao:
+                    hora = b[0].split(' ')[1]
+                    origem = "RETIRADA" if "[SANGRIA]" in b[1] else "BALCÃO"
+                    desc = b[1][:32]
+                    total_item = b[2]
+                    pgto = b[3]
+                    
+                    f.write(f"{hora:<10} {origem:<12} {desc:<32} R$ {total_item:<12.2f} {pgto}\n")
+                    
+                    # Se for faturamento real positivo e não for cortesia, soma no bruto
+                    if total_item > 0 and "CORTESIA" not in pgto:
+                        total_bruto += total_item
+                    
+                    # Trata o fluxo da cortesia separadamente para fins de auditoria
+                    if "CORTESIA" in pgto:
+                        # Como o valor gravado é 0.00, apenas contamos o registro
+                        total_cortesias += 1
+                        continue
+
+                    if pgto == "DINHEIRO": 
+                        total_dinheiro_movimentado += total_item # Sangrias entram aqui diminuindo por serem negativas (-)
+                    elif pgto == "PIX": 
+                        total_pix += total_item
+                    elif pgto in ["CRÉDITO", "DÉBITO"]: 
+                        total_cartao += total_item
+                
+                # RESUMO COMPLETO DE AUDITORIA FINANCEIRA
+                f.write("-" * 81 + "\n")
+                f.write(f"RESUMO DO FATURAMENTO BRUTO DE HOJE:       R$ {total_bruto:.2f}\n")
+                f.write(f" -> Total Recebido via PIX:                R$ {total_pix:.2f}\n")
+                f.write(f" -> Total Recebido via CARTÕES:            R$ {total_cartao:.2f}\n")
+                f.write(f" -> Total Recebido em ESPÉCIE (Líquido):   R$ {total_dinheiro_movimentado:.2f}\n")
+                f.write("-" * 81 + "\n")
+                f.write(f"SALDO REAL ESPERADO NA GAVETA (FISÍCO):    R$ {(abertura + total_dinheiro_movimentado):.2f}\n")
+                f.write(f"=================================================================================\n")
+            
+            messagebox.showinfo("Sucesso", f"Relatório do caixa emitido com sucesso:\n{nome_arq}")
+            
+            # Abre o arquivo TXT na tela baseado no OS do usuário
+            if hasattr(os, 'startfile'):
+                os.startfile(nome_arq)
+            else:
+                os.system(f'xdg-open "{nome_arq}"')
+                
+        except Exception as e:
+            messagebox.showerror("Erro Relatório", f"Erro crítico ao compilar o arquivo de caixa: {e}")
