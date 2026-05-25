@@ -12,4 +12,13 @@ CORES = {
     'busca': '#505050'
 }
 
+# Adicione no seu sistema/config.py
+
+DADOS_EMPRESA = {
+    "nome": "BANCART",
+    "cnpj": "12.345.678/0001-99",
+    "endereco": "Av. Principal, nº 100 - Centro, Brasília-DF",
+    "telefone": "(61) 99999-8888"
+}
+
 DB_NAME = "bancart_dados.db"
