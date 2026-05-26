@@ -3,6 +3,8 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import sqlite3
 from sistema.config import CORES, DB_NAME
+import csv
+from tkinter import filedialog
 
 class AbaEstoque(tk.Frame):
     def __init__(self, parent, app_principal):
@@ -39,6 +41,17 @@ class AbaEstoque(tk.Frame):
         tk.Button(fr_btns, text="ATUALIZAR", bg=CORES['laranja'], fg='white', command=self.atualizar_produto).pack(side='left', padx=5)
         tk.Button(fr_btns, text="EXCLUIR", bg=CORES['vermelho'], fg='white', command=self.excluir_produto).pack(side='left', padx=10)
         tk.Button(fr_btns, text="Limpar Campos", command=self.limpar_campos_estoque).pack(side='left', padx=5)
+
+        # Exemplo de inserção junto aos seus botões atuais (ajuste o frame conforme seu layout)
+        self.btn_importar_csv = tk.Button(
+            fr_btns, # Substitua pelo nome do seu frame de botões da aba estoque
+            text="📥 IMPORTAR CSV", 
+            bg=CORES['azul'], 
+            fg='white', 
+            font=('Arial', 10, 'bold'),
+            command=self.importar_produtos_csv
+        )
+        self.btn_importar_csv.pack(side='left', padx=10, ipady=3)
 
         # 3. TABELA
         self.tree_est = ttk.Treeview(self, columns=('ID','Cod','Nome','Preço','Estoque'), show='headings')
@@ -112,6 +125,89 @@ class AbaEstoque(tk.Frame):
             self.app.atualizar_todos_produtos()
             messagebox.showinfo("OK","Salvo!")
         except: messagebox.showerror("Erro","Dados inválidos")
+
+    def importar_produtos_csv(self):
+        # 1. Abre o gerenciador de arquivos do Linux/Windows filtrando apenas por arquivos .csv
+        caminho_arquivo = filedialog.askopenfilename(
+            title="Selecionar Lista de Produtos em CSV",
+            filetypes=[("Arquivos CSV", "*.csv"), ("Todos os arquivos", "*.*")]
+        )
+        
+        if not caminho_arquivo:
+            return # Usuário cancelou a seleção
+
+        try:
+            conn = sqlite3.connect(DB_NAME)
+            cursor = conn.cursor()
+            
+            produtos_inseridos = 0
+            produtos_atualizados = 0
+            
+            # 2. Abre e lê o arquivo tratando codificação UTF-8 padrão
+            with open(caminho_arquivo, mode='r', encoding='utf-8') as f:
+                # Detecta automaticamente se o separador é vírgula (,) ou ponto-e-vírgula (;)
+                conteudo_inicial = f.read(2048)
+                separador = ';' if ';' in conteudo_inicial else ','
+                f.seek(0) # Volta para o início do arquivo
+                
+                leitor_csv = csv.DictReader(f, delimiter=separador)
+                
+                # Validação rápida de cabeçalho
+                campos_obrigatorios = ['codigo', 'nome', 'preco', 'estoque']
+                if not all(campo in leitor_csv.fieldnames for campo in campos_obrigatorios):
+                    messagebox.showerror("Erro de Formato", "O arquivo CSV deve conter exatamente as colunas:\ncodigo, nome, preco, estoque")
+                    conn.close()
+                    return
+
+                for linha in leitor_csv:
+                    # Limpa e valida os dados de cada linha
+                    codigo = str(linha['codigo']).strip()
+                    nome = str(linha['nome']).strip().upper()
+                    
+                    try:
+                        preco = float(linha['preco'].replace(',', '.'))
+                        estoque = int(linha['estoque'])
+                    except ValueError:
+                        # Pula linhas com valores quebrados ou inválidos (proteção de dados)
+                        continue
+
+                    if not nome or not codigo:
+                        continue
+
+                    # 3. Verifica se o produto com esse código já existe no banco de dados
+                    produto_existente = cursor.execute("SELECT id FROM produtos WHERE codigo = ?", (codigo,)).fetchone()
+                    
+                    if produto_existente:
+                        # Se já existe, apenas SOMA o novo estoque importado e atualiza o preço
+                        cursor.execute(
+                            "UPDATE produtos SET preco = ?, estoque = estoque + ? WHERE id = ?",
+                            (preco, estoque, produto_existente[0])
+                        )
+                        produtos_atualizados += 1
+                    else:
+                        # Se for um produto novo, insere o registro do zero
+                        cursor.execute(
+                            "INSERT INTO produtos (codigo, nome, preco, estoque) VALUES (?, ?, ?, ?)",
+                            (codigo, nome, preco, estoque)
+                        )
+                        produtos_inseridos += 1
+            
+            # Confirma todas as alterações no banco de uma só vez
+            conn.commit()
+            conn.close()
+            
+            # 4. Atualiza os componentesvisuais e avisa o operador
+            self.salvar_produto() # Recarrega a tabela (Treeview) da AbaEstoque
+            if hasattr(self.app, 'atualizar_todos_produtos'):
+                self.app.atualizar_todos_produtos() # Atualiza os caches de busca das outras abas (balcão, mesas...)
+                
+            messagebox.showinfo("Importação Concluída", 
+                                f"Operação realizada com sucesso!\n\n"
+                                f"📦 Novos produtos cadastrados: {produtos_inseridos}\n"
+                                f"🔄 Estoques/Preços atualizados: {produtos_atualizados}")
+                                
+        except Exception as e:
+            messagebox.showerror("Erro Crítico", f"Falha ao processar o arquivo CSV:\n{e}")
 
     def atualizar_produto(self):
         if not self.id_produto_selecionado: return
