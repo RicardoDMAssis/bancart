@@ -1,0 +1,41 @@
+name: Gerar Executavel Windows
+
+on:
+  push:
+    branches: [ main ] # Executa sempre que você der push na branch main
+
+jobs:
+  build:
+    runs-on: windows-latest # O GitHub vai usar uma máquina Windows real
+
+    steps:
+    - name: Baixar o código do repositório
+      uses: actions/checkout@v4
+
+    - name: Configurar o Python
+      uses: actions/setup-python@v5
+      with:
+        python-state: '3.10'
+
+    - name: Instalar Dependências
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+        # Se você tiver um arquivo requirements.txt, descomente a linha abaixo:
+        # pip install -r requirements.txt
+
+    - name: Compilar com PyInstaller
+      run: |
+        pyinstaller --noconfirm --onedir --windowed --name "MeuSistema" main.py
+
+    - name: Copiar Pastas Extras e Banco de Dados
+      run: |
+        # Subisntitua 'minha_pasta_assets' e 'banco.db' pelos nomes reais do seu projeto
+        xcopy /E /I minha_pasta_assets dist/MeuSistema/minha_pasta_assets
+        copy banco.db dist/MeuSistema/
+
+    - name: Upload do Executável Pronto
+      uses: actions/upload-artifact@v4
+      with:
+        name: Sistema-Windows-Pronto
+        path: dist/MeuSistema/

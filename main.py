@@ -11,6 +11,28 @@ from sistema.aba_balcao import AbaBalcao
 from sistema.aba_estoque import AbaEstoque
 from sistema.aba_caixa import AbaCaixa
 
+import os
+import sys
+
+def obter_caminho_recurso(caminho_relativo):
+    """ Retorna o caminho absoluto para o recurso, funcionando no desenvolvimento e no PyInstaller """
+    try:
+        # O PyInstaller cria uma pasta temporária e armazena o caminho em _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, caminho_relativo)
+
+# --- EXEMPLO DE USO ---
+# Se antes você abria um arquivo assim:
+# com open("sistema/dados.csv") as f:
+
+# Agora você deve abrir assim:
+caminho_do_arquivo = obter_caminho_recurso("sistema/dados.csv")
+with open(caminho_do_arquivo, "r") as f:
+    conteudo = f.read()
+
 class BancartApp:
     def __init__(self, root):
         self.root = root
